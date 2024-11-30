@@ -1,0 +1,217 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <memory>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class Book {
+public:
+    Book(string t, string a, int y, int c) : title(t), author(a), year(y), copies(c) {}
+
+    string getTitle() const { return title; }
+    string getAuthor() const { return author; }
+    int getYear() const { return year; }
+    int getCopies() const { return copies; }
+
+    void setCopies(int c) { copies = c; }
+
+    void printBook() const {
+        cout << "Название: " << title << "\nАвтор: " << author
+             << "\nГод издания: " << year << "\nКоличество экземпляров: " << copies << endl;
+    }
+
+private:
+    string title;
+    string author;
+    int year;
+    int copies;
+};
+
+class BookRepository {
+public:
+    BookRepository(const string &fileName) : fileName(fileName) {}
+
+    void addBookToFile(const Book &book) {
+        ofstream outFile(fileName, ios::app);
+        if (outFile) {
+            outFile << book.getTitle() << "\n" << book.getAuthor() << "\n"
+                    << book.getYear() << "\n" << book.getCopies() << "\n";
+        }
+        else {
+            cerr << "Ошибка открытия файла для записи!" << endl;
+        }
+    }
+
+    vector<Book> readBooksFromFile() {
+        ifstream inFile(fileName);
+        vector<Book> books;
+        if (inFile) {
+            string title, author;
+            int year, copies;
+
+            while (getline(inFile, title)) {
+                getline(inFile, author);
+                inFile >> year >> copies;
+                inFile.ignore();
+                books.push_back(Book(title, author, year, copies));
+            }
+        }
+        else {
+            cerr << "Ошибка открытия файла для чтения!" << endl;
+        }
+        return books;
+    }
+
+    void saveBooksToFile(const vector<Book> &books) {
+        ofstream outFile(fileName);
+        if (outFile) {
+            for (const auto &book : books) {
+                outFile << book.getTitle() << "\n" << book.getAuthor() << "\n"
+                        << book.getYear() << "\n" << book.getCopies() << "\n";
+            }
+        }
+        else {
+            cerr << "Ошибка открытия файла для записи!" << endl;
+        }
+    }
+
+private:
+    string fileName;
+};
+
+class BookManager {
+public:
+    BookManager(BookRepository &repo) : repository(repo) {}
+
+    void addNewBook() {
+        string title, author;
+        int year, copies;
+
+        cout << "Введите название книги: ";
+        getline(cin, title);
+        cout << "Введите автора книги: ";
+        getline(cin, author);
+        cout << "Введите год издания книги: ";
+        cin >> year;
+        cout << "Введите количество копий книги: ";
+        cin >> copies;
+        cin.ignore();
+
+        Book newBook(title, author, year, copies);
+        repository.addBookToFile(newBook);
+
+        cout << "Книга добавлена в систему.\n";
+    }
+
+    void searchBookByTitle(const string &bookTitle) {
+        auto books = repository.readBooksFromFile();
+        bool found = false;
+
+        for (const auto &book : books) {
+            if (book.getTitle() == bookTitle) {
+                cout << "Книга найдена:\n";
+                book.printBook();
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            cout << "Книга с таким названием не найдена.\n";
+        }
+    }
+
+    void sortBooksByAuthor() {
+        auto books = repository.readBooksFromFile();
+        sort(books.begin(), books.end(), [](const Book &a, const Book &b) {
+            return a.getAuthor() < b.getAuthor();
+        });
+        repository.saveBooksToFile(books);
+        cout << "Сортировка по автору завершена.\n";
+    }
+
+    void sortBooksByYear() {
+        auto books = repository.readBooksFromFile();
+        sort(books.begin(), books.end(), [](const Book &a, const Book &b) {
+            return a.getYear() < b.getYear();
+        });
+        repository.saveBooksToFile(books);
+        cout << "Сортировка по году издания завершена.\n";
+    }
+
+    void displayBooksByCopies(int maxCopies) {
+        auto books = repository.readBooksFromFile();
+        bool found = false;
+
+        for (const auto &book : books) {
+            if (book.getCopies() <= maxCopies) {
+                book.printBook();
+                found = true;
+            }
+        }
+
+        if (!found) {
+            cout << "Книг с таким количеством экземпляров не найдено.\n";
+        }
+    }
+
+private:
+    BookRepository &repository;
+};
+
+void displayMenu() {
+    BookRepository repository("tasks.txt");
+    BookManager manager(repository);
+
+    while (true) {
+        cout << "\nМеню:\n";
+        cout << "1. Добавить новую книгу\n";
+        cout << "2. Поиск книги по названию\n";
+        cout << "3. Сортировка книг\n";
+        cout << "4. Вывод книг по количеству экземпляров\n";
+        cout << "Выберите опцию: ";
+
+        int choice;
+        cin >> choice;
+        cin.ignore();
+
+        if (choice == 1) {
+            manager.addNewBook();
+        }
+        else if (choice == 2) {
+            string title;
+            cout << "Введите название книги для поиска: ";
+            getline(cin, title);
+            manager.searchBookByTitle(title);
+        }
+        else if (choice == 3) {
+            cout << "Выберите критерий сортировки:\n";
+            cout << "1. По автору\n";
+            cout << "2. По году издания\n";
+            int sortChoice;
+            cin >> sortChoice;
+            cin.ignore();
+            if (sortChoice == 1) {
+                manager.sortBooksByAuthor();
+            }
+            else if (sortChoice == 2) {
+                manager.sortBooksByYear();
+            }
+        }
+        else if (choice == 4) {
+            int maxCopies;
+            cout << "Введите максимальное количество экземпляров: ";
+            cin >> maxCopies;
+            cin.ignore();
+            manager.displayBooksByCopies(maxCopies);
+        }
+    }
+}
+
+int main() {
+    displayMenu();
+    return 0;
+}
