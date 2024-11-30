@@ -1,0 +1,204 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+struct Book {
+    char *title;
+    char *author;
+    int year;
+    int copies;
+
+    Book(const char *t, const char *a, int y, int c) {
+        title = new char[strlen(t) + 1];
+        strcpy(title, t);
+        author = new char[strlen(a) + 1];
+        strcpy(author, a);
+        year = y;
+        copies = c;
+    }
+
+    ~Book() {
+        delete[] title;
+        delete[] author;
+    }
+};
+
+void addBookToFile(const Book &book) {
+    ofstream outFile("tasks.txt", ios::app);
+    if (outFile) {
+        outFile << book.title << "\n" << book.author << "\n" << book.year << "\n" << book.copies << "\n";
+    }
+    else {
+        cout << "Ошибка открытия файла для записи!" << endl;
+    }
+}
+
+void searchBookInFile(const string &title) {
+    ifstream inFile("tasks.txt");
+    if (inFile) {
+        string bookTitle, author;
+        int year, copies;
+        bool found = false;
+        while (getline(inFile, bookTitle)) {
+            getline(inFile, author);
+            inFile >> year >> copies;
+            inFile.ignore();
+
+            if (bookTitle == title) {
+                cout << "Книга найдена:\n";
+                cout << "Название: " << bookTitle << "\nАвтор: " << author << "\nГод издания: " << year << "\nКоличество экземпляров: " << copies << endl;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            cout << "Книга с таким названием не найдена.\n";
+        }
+    }
+    else {
+        cout << "Ошибка открытия файла для чтения!" << endl;
+    }
+}
+
+void sortBooks(int choice) {
+    ifstream inFile("tasks.txt");
+    vector<Book *> books;
+
+    if (inFile) {
+        string title, author;
+        int year, copies;
+
+        while (getline(inFile, title)) {
+            getline(inFile, author);
+            inFile >> year >> copies;
+            inFile.ignore();
+
+            books.push_back(new Book(title.c_str(), author.c_str(), year, copies));
+        }
+
+        if (choice == 1) {
+            sort(books.begin(), books.end(), [](Book *a, Book *b) {
+                return strcmp(a->author, b->author) < 0;
+            });
+        }
+        else if (choice == 2) {
+            sort(books.begin(), books.end(), [](Book *a, Book *b) {
+                return a->year < b->year;
+            });
+        }
+
+        ofstream outFile("output.txt");
+        for (const auto &book : books) {
+            outFile << book->title << "\n" << book->author << "\n" << book->year << "\n" << book->copies << "\n";
+        }
+
+        cout << "Сортировка завершена. Результаты записаны в файл 'output.txt'.\n";
+
+        for (auto &book : books) {
+            delete book;
+        }
+    }
+    else {
+        cout << "Ошибка открытия файла для чтения!" << endl;
+    }
+}
+
+void displayBooksByCopies(int maxCopies) {
+    ifstream inFile("tasks.txt");
+    if (inFile) {
+        string title, author;
+        int year, copies;
+        bool found = false;
+        while (getline(inFile, title)) {
+            getline(inFile, author);
+            inFile >> year >> copies;
+            inFile.ignore();
+
+            if (copies <= maxCopies) {
+                cout << "Название: " << title << "\nАвтор: " << author << "\nГод издания: " << year << "\nКоличество экземпляров: " << copies << endl;
+                found = true;
+            }
+        }
+
+        if (!found) {
+            cout << "Книг с таким количеством экземпляров не найдено.\n";
+        }
+    }
+    else {
+        cout << "Ошибка открытия файла для чтения!" << endl;
+    }
+}
+
+
+void addNewBook() {
+    string title, author;
+    int year, copies;
+
+    cout << "Введите название книги: ";
+    getline(cin, title);
+    cout << "Введите автора книги: ";
+    getline(cin, author);
+    cout << "Введите год издания книги: ";
+    cin >> year;
+    cout << "Введите количество копий книги: ";
+    cin >> copies;
+    cin.ignore();
+
+    Book newBook(title.c_str(), author.c_str(), year, copies);
+    addBookToFile(newBook);
+
+    cout << "Книга добавлена в систему.\n";
+}
+
+
+void displayMenu() {
+    while (true) {
+        cout << "\nМеню:\n";
+        cout << "1. Добавить новую книгу\n";
+        cout << "2. Поиск книги по названию\n";
+        cout << "3. Сортировка книг\n";
+        cout << "4. Вывод книг по количеству экземпляров\n";
+        cout << "Выберите опцию: ";
+
+        int choice;
+        cin >> choice;
+        cin.ignore();
+
+        if (choice == 1) {
+            addNewBook();
+        }
+        else if (choice == 2) {
+            string title;
+            cout << "Введите название книги для поиска: ";
+            getline(cin, title);
+            searchBookInFile(title);
+        }
+        else if (choice == 3) {
+            cout << "Выберите критерий сортировки:\n";
+            cout << "1. По автору\n";
+            cout << "2. По году издания\n";
+            int sortChoice;
+            cin >> sortChoice;
+            cin.ignore();
+            sortBooks(sortChoice);
+        }
+        else if (choice == 4) {
+            int maxCopies;
+            cout << "Введите максимальное количество экземпляров: ";
+            cin >> maxCopies;
+            cin.ignore();
+            displayBooksByCopies(maxCopies);
+        }
+
+    }
+}
+
+int main() {
+    displayMenu();
+    return 0;
+}
